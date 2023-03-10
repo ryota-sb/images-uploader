@@ -103,6 +103,8 @@ GEM
     mini_portile2 (2.8.0)
     minitest (5.16.3)
     msgpack (1.6.1)
+    net-http (0.3.2)
+      uri
     net-imap (0.3.1)
       net-protocol
     net-pop (0.1.2)
@@ -168,6 +170,7 @@ GEM
     timeout (0.3.1)
     tzinfo (2.0.5)
       concurrent-ruby (~> 1.0)
+    uri (0.12.0)
     websocket-driver (0.7.5)
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
@@ -181,6 +184,7 @@ DEPENDENCIES
   byebug
   carrierwave
   listen (~> 3.3)
+  net-http
   pg (~> 1.1)
   puma (~> 5.0)
   rails (~> 6.1.6)
