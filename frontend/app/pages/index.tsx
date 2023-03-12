@@ -1,8 +1,64 @@
-import type { NextPage } from 'next'
-import Head from 'next/head'
-import Image from 'next/image'
+import { NextPage } from "next";
+import Head from "next/head";
+import Image from "next/image";
+import { useRouter } from "next/router";
+
+import { useState, useEffect } from "react";
+
+import { useForm, SubmitHandler } from "react-hook-form";
+
+import { InputValue, PostData } from "../types";
 
 const Home: NextPage = () => {
+  // 画像の状態管理
+  const [image, setImage] = useState<File | null>(null);
+  // 投稿データの状態管理
+  const [posts, setPosts] = useState<PostData[]>([]);
+
+  const router = useRouter();
+
+  // useFormの中の必要なメソッドを使用できるように設定
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<InputValue>({
+    mode: "onChange",
+    defaultValues: { title: "", image: { url: "" } },
+  });
+
+  // フォームのファイル選択画像で選択されたファイルデータをsetImageに追加
+  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImage(file);
+  };
+
+  // ボタンを押した時にFormDataに入力内容を追加し、RailsAPIにPOSTして登録する
+  const onSubmit: SubmitHandler<InputValue> = async (inputValue) => {
+    const formData = new FormData();
+    formData.append("post[title]", inputValue.title);
+    formData.append("post[image]", image!, image!.name);
+
+    const response = await fetch("http://localhost:3000/api/v1/posts", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json();
+    router.reload();
+  };
+
+  // postを全取得する
+  const getPosts = async () => {
+    const response = await fetch("http://localhost:3000/api/v1/posts");
+    const data = await response.json();
+    setPosts(data);
+  };
+
+  useEffect(() => {
+    getPosts();
+  }, []);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-2">
       <Head>
@@ -10,77 +66,54 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
-        <h1 className="text-6xl font-bold">
-          Welcome to{' '}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Next.js!
-          </a>
-        </h1>
+      <div>
+        <h1 className="text-5xl my-10">Images Uploader</h1>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="flex flex-col gap-y-3">
+            <div className="flex flex-col gap-y-3">
+              <label htmlFor="title">タイトル</label>
+              <input
+                type="text"
+                {...register("title", { required: true })}
+                className="border border-black py-2 px-4"
+              />
+              {errors.title && (
+                <h1 className="text-red-500">タイトルは必須です</h1>
+              )}
+            </div>
+            <div className="flex flex-col gap-y-3">
+              <label htmlFor="image">画像アップロード</label>
+              <input
+                type="file"
+                {...register("image", { required: true })}
+                className="border border-black py-2 px-4"
+                onChange={onFileInputChange}
+              />
+              {errors.image && <h1 className="text-red-500">画像は必須です</h1>}
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="mt-8 bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded"
+            >
+              追加する
+            </button>
+          </div>
+        </form>
 
-        <p className="mt-3 text-2xl">
-          Get started by editing{' '}
-          <code className="rounded-md bg-gray-100 p-3 font-mono text-lg">
-            pages/index.tsx
-          </code>
-        </p>
-
-        <div className="mt-6 flex max-w-4xl flex-wrap items-center justify-around sm:w-full">
-          <a
-            href="https://nextjs.org/docs"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Documentation &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Find in-depth information about Next.js features and its API.
-            </p>
-          </a>
-
-          <a
-            href="https://nextjs.org/learn"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Learn &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Learn about Next.js in an interactive course with quizzes!
-            </p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Examples &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Discover and deploy boilerplate example Next.js projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Deploy &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+        <div className="grid grid-cols-3">
+          {posts &&
+            posts.map((post: PostData) => (
+              <div key={post.id}>
+                <h1>{post.title}</h1>
+                <Image src={post.image.url} width={300} height={300} alt={""} />
+              </div>
+            ))}
         </div>
-      </main>
-
-      <footer className="flex h-24 w-full items-center justify-center border-t">
-        <a
-          className="flex items-center justify-center gap-2"
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-        </a>
-      </footer>
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
